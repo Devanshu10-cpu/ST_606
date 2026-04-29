@@ -1,0 +1,178 @@
+---
+title: "THESIS"
+author: "devanshu"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+library(tidyverse)
+```
+
+```{r}
+digital <- haven::read_sav("CRONOS-3 Theme - Make it Digital.sav")
+labelled::generate_dictionary(digital)
+```
+
+```{r}
+head(digital)
+```
+
+```{r}
+# w1dq9 - Know how to check truthfulness of information or content on internet
+# w3dq47 - Social media exposes people to misinformation
+# w3dq50 - How worried of being scammed online
+
+digital_vars <- c("cntry", "age", "gndr", "eduyrs", "w1dq9", "w3dq47", "w3dq50")
+# Creating a smaller working dataset
+df_subset <- digital %>%
+  select(all_of(digital_vars))
+head(df_subset)
+```
+```{r}
+#renaming digital variables
+
+df_clean <- df_subset %>%
+ 
+  rename(
+    skill_factcheck = w1dq9,
+    belief_misinfo = w3dq47,
+    worry_scam = w3dq50
+  ) 
+names(df_clean)
+```
+
+```{r}
+glimpse(df_clean)
+```
+
+```{r}
+
+install.packages("naniar")
+```
+```{r}
+library(naniar)
+```
+
+
+```{r}
+# cleaning digital variables
+
+df_clean <- df_clean %>%
+  # 1. Replace common missing value codes with NA
+  replace_with_na_all(condition = ~.x %in% c(77, 88, 99, 7777, 8888, 9999)) %>%
+  # 2. Drop rows where our core variables are missing
+  drop_na()
+```
+
+
+```{r}
+colSums(is.na(df_clean))
+```
+
+```{r}
+summary(df_clean)
+```
+
+```{r}
+library(ggmosaic)
+```
+
+```{r}
+# Converting survey numbers to categories with actual text labels!
+df_plot <- df_clean %>%
+  mutate(
+    
+    skill_factcheck = factor(skill_factcheck, 
+                             levels = c(1, 2, 3, 4, 5), 
+                             labels = c("1 - Very Low", "2 - Low", "3 - Moderate", "4 - High", "5 - Very High")),
+    
+    
+    worry_scam = factor(worry_scam, 
+                        levels = c(1, 2, 3, 4, 5), 
+                        labels = c("1 - Very Low", "2 - Low", "3 - Moderate", "4 - High", "5 - Very High")),
+    
+    gndr = factor(gndr, levels = c(1, 2), labels = c("Male", "Female")),
+    belief_misinfo = factor(belief_misinfo, levels = c(1, 2, 3, 4, 5), labels = c("Strongly Disagree", "Disagree", "Neither", "Agree", "Strongly Agree"))
+  )
+```
+
+```{r}
+# Plot - Skill vs. Worry
+mosaicplot(~ skill_factcheck + worry_scam, data = df_plot,
+           color = TRUE,
+           main = "The Vulnerability Gap: Digital Skill vs. Worry About Scams",
+           xlab = "Skill Level: Checking Truthfulness",
+           ylab = "Worry Level: Being Scammed Online")
+```
+
+
+```{r}
+df_plot <- df_clean %>%
+  mutate(
+    
+    gndr = factor(gndr, 
+                  levels = c(1, 2), 
+                  labels = c("Male", "Female")),
+    
+    
+    belief_misinfo = factor(belief_misinfo, 
+                            levels = c(1, 2, 3, 4, 5), 
+                            labels = c("Strongly Disagree", "Disagree", "Neither", "Agree", "Strongly Agree"))
+  )
+```
+
+
+```{r}
+# Plot : Gender vs. Misinformation
+mosaicplot(~ gndr + belief_misinfo, data = df_plot,
+           color = TRUE,
+           main = "Perception of Misinformation by Gender",
+           xlab = "Gender",
+           ylab = "Belief: Social Media Exposes People to Misinfo")
+```
+
+........................................................................
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+
+df_bar <- df_plot %>%
+  filter(!is.na(skill_factcheck), !is.na(cntry))
+
+ggplot(df_bar, aes(x = cntry, fill = as.factor(skill_factcheck))) +
+  
+  geom_bar(position = "fill", width = 0.7) + 
+  
+  
+  scale_y_continuous(labels = scales::percent_format()) +
+  
+  
+  scale_fill_viridis_d(option = "plasma", name = "Fact-Checking Skill\n(1=Low, 5=High)") +
+  
+  theme_minimal() +
+  labs(
+    title = "Distribution of Fact-Checking Skills by Country",
+    subtitle = "Percentage of respondents at each skill level",
+    x = "Country",
+    y = "Percentage of Respondents (%)"
+  ) +
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(face = "bold", size = 12),
+    panel.grid.major.x = element_blank()
+  )
+
+```
+
+
+
+
+
+
